@@ -237,7 +237,7 @@
         messagingSenderId: "123631990006",
         appId: "1:123631990006:web:1123d8d472bfaced7228d7",
         measurementId: "G-9CF2CSFGBK"
-};
+    };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
@@ -438,8 +438,7 @@
                 challengeArea.innerHTML = `
                     <h2>Final Evaluation</h2>
                     <p style="color: var(--accent);">Warning: Timer is running!</p>
-                    <p>What is the standard logic voltage of an Arduino UNO?</p>
-                    <input type="text" id="answer-input" placeholder="Your answer (e.g. 3.3V)">
+                    <input type="text" id="answer-input" placeholder="Your answer">
                     <button id="btn-submit-group" class="btn-accent" onclick="submitChallenge()">Submit Group Answer</button>
 
                     <hr style="border-color: #222; margin: 40px 0 20px 0;">
