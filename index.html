@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab Tour K26 - ePassport</title>
+    <!-- EE Theme Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --primary: #00f3ff;
+            --accent: #ff003c;
+            --success: #00ff66;
+            --text: #e0fbfc;
+            --panel: rgba(11, 20, 38, 0.95);
+        }
+        
+        body { 
+            font-family: 'Share Tech Mono', monospace; 
+            background-color: var(--bg-color); 
+            color: var(--text);
+            text-align: center; 
+            padding: 0; 
+            margin: 0;
+            /* Blueprint/Circuit Grid Background */
+            background-image: 
+                linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Safe Containers for Watermarks (Prevents Overlap) */
+        .watermark-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 20px 10px;
+            min-height: 50px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .watermark-container span {
+            font-family: 'Share Tech Mono', monospace;
+            color: rgba(0, 243, 255, 0.25); /* Bright enough to read, but subtle */
+            font-size: 1.5rem;
+            letter-spacing: 2px;
+            text-shadow: 0 0 5px rgba(0,243,255,0.1);
+            user-select: none;
+        }
+
+        .container { 
+            max-width: 90%; 
+            width: 420px;
+            margin: auto; /* Centers vertically and horizontally between watermarks */
+            background: var(--panel); 
+            padding: 30px; 
+            border-radius: 8px; 
+            border: 1px solid var(--primary);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.15); 
+            position: relative;
+            z-index: 10; 
+            box-sizing: border-box;
+        }
+        
+        h1, h2, h3 { 
+            color: var(--primary); 
+            text-transform: uppercase; 
+            text-shadow: 0 0 8px rgba(0, 243, 255, 0.5); 
+            letter-spacing: 2px;
+            margin-top: 0;
+        }
+
+        p { line-height: 1.5; }
+        
+        input, select { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 10px 0; 
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--primary); 
+            color: var(--primary);
+            border-radius: 4px; 
+            box-sizing: border-box;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 16px;
+            outline: none;
+            transition: box-shadow 0.3s;
+        }
+        
+        input:focus, select:focus {
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        button { 
+            background: transparent; 
+            color: var(--primary); 
+            border: 1px solid var(--primary); 
+            padding: 12px 20px; 
+            width: 100%; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-weight: bold; 
+            font-size: 16px;
+            font-family: 'Share Tech Mono', monospace;
+            text-transform: uppercase;
+            margin-bottom: 10px; 
+            box-sizing: border-box;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover:not(:disabled) {
+            background: var(--primary);
+            color: var(--bg-color);
+            box-shadow: 0 0 15px var(--primary);
+        }
+
+        button:disabled {
+            border-color: #555;
+            color: #555;
+            cursor: not-allowed;
+        }
+        
+        button.btn-accent {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+        button.btn-accent:hover:not(:disabled) {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 0 15px var(--accent);
+        }
+
+        .terminal {
+            background: #000;
+            border: 1px solid #333;
+            border-left: 3px solid var(--success);
+            padding: 15px;
+            margin-top: 20px;
+            text-align: left;
+            font-size: 0.9em;
+            min-height: 80px;
+            border-radius: 4px;
+        }
+        .sys-msg { color: #888; margin-top: 5px; }
+        .bin-output { color: var(--success); text-shadow: 0 0 5px var(--success); margin: 5px 0; }
+        .hint-output { color: #ffc107; text-shadow: 0 0 5px #ffc107; margin: 10px 0; font-weight: bold; border: 1px dashed #ffc107; padding: 5px;}
+
+        .hidden { display: none !important; }
+        
+        hr { border: 0; border-top: 1px solid #333; margin: 20px 0; }
+
+        .mysterious-input {
+            background: #05080f;
+            border: 1px dashed #333;
+            color: #555;
+            transition: all 0.5s;
+        }
+        .mysterious-input:focus {
+            border-color: #666;
+            color: #aaa;
+        }
+        .mysterious-btn {
+            background: transparent;
+            border: 1px dashed #333;
+            color: #555;
+        }
+        .mysterious-btn:hover:not(:disabled) {
+            background: #111;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+<!-- TOP WATERMARKS -->
+<div class="watermark-container" id="top-watermarks">
+    <span id="bg-code-0"></span>
+    <span id="bg-code-1"></span>
+    <span id="bg-code-2"></span>
+</div>
+
+<!-- LOGIN SECTION -->
+<div class="container" id="login-section">
+    <h1>K26 ePassport</h1>
+    <p>EE Department Lab Tour</p>
+    <input type="text" id="mssv" placeholder="Student ID (e.g. EE26xxxx)">
+    <select id="group-select">
+        <option value="1">Group 1</option>
+        <option value="2">Group 2</option>
+        <option value="3">Group 3</option>
+        <option value="4">Group 4</option>
+        <option value="5">Group 5</option>
+        <option value="6">Group 6</option>
+    </select>
+    <button id="btn-login" onclick="login()">Initialize Sequence</button>
+</div>
+
+<!-- DASHBOARD SECTION -->
+<div class="container hidden" id="dashboard-section">
+    <h2>Data Collected: <span id="progress-text">0/5</span></h2>
+    <input type="text" id="passcode-input" placeholder="Enter Station Passcode">
+    <button id="btn-submit-pass" onclick="submitPasscode()">Submit Passcode</button>
+    
+    <div class="terminal" id="terminal-screen">
+        <div class="sys-msg">[SYS] System initialized. Awaiting station passcodes...</div>
+    </div>
+
+    <div id="hidden-challenge-area" class="hidden">
+        <hr>
+        <h3>All Stations Reached</h3>
+        <button class="btn-accent" onclick="startChallenge()">Proceed to Final Challenge</button>
+    </div>
+</div>
+
+<!-- FINAL EVALUATION SECTION -->
+<div class="container hidden" id="challenge-section">
+    <h2>Final Evaluation</h2>
+    <p style="color: var(--accent);">Warning: Timer is running!</p>
+    <p>What is the standard logic voltage of an Arduino UNO?</p>
+    <input type="text" id="answer-input" placeholder="Your answer (e.g. 3.3V)">
+    <button id="btn-submit-group" class="btn-accent" onclick="submitChallenge()">Submit Group Answer</button>
+
+    <hr style="border-color: #222; margin: 40px 0 20px 0;">
+    <div style="text-align: left;">
+        <p style="color: #444; font-size: 0.75em; margin-bottom: 5px;">[?] UNIDENTIFIED BACKGROUND SIGNALS DETECTED. DECODE REQUIRED.</p>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="secret-key-input" placeholder="______" maxlength="6" class="mysterious-input" style="flex: 1; padding: 10px; margin: 0; width: auto;">
+            <button id="btn-submit-secret" class="mysterious-btn" onclick="submitSecret()" style="width: auto; padding: 10px 20px; margin: 0;">Execute</button>
+        </div>
+    </div>
+</div>
+
+<!-- BOTTOM WATERMARKS -->
+<div class="watermark-container" id="bottom-watermarks">
+    <span id="bg-code-3"></span>
+    <span id="bg-code-4"></span>
+</div>
+
+<script>
+// Encapsulate everything to prevent F12 Console Hacking
+(function() {
+    const firebaseConfig = {
+      apiKey: "AIzaSyCiQCfDa5WrecRUnhJxLe8ILITMjzMnldE",
+      authDomain: "labtour-k25.firebaseapp.com",
+      projectId: "labtour-k25",
+      storageBucket: "labtour-k25.firebasestorage.app",
+      messagingSenderId: "1011297715074",
+      appId: "1:1011297715074:web:96f68db65ef5d51441059b",
+      measurementId: "G-FMWYL143V2"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let studentID = "";
+    let studentGroup = 1;
+    let startTime = 0;
+    
+    // Arrays storing strings they've found
+    let acquiredFragments = []; 
+    let hintAcquired = false;
+
+    // Secured Configuration loaded from Firebase
+    let configData = null;
+
+    db.collection("Config").doc("gameSettings").onSnapshot((doc) => {
+        if (doc.exists) {
+            configData = doc.data();
+            updateTerminalState(); 
+        }
+    });
+
+    // Cryptographic Hash Function (SHA-256)
+    async function sha256(message) {
+        const msgBuffer = new TextEncoder().encode(message);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    window.login = async function() {
+        studentID = document.getElementById('mssv').value.trim().toUpperCase();
+        studentGroup = parseInt(document.getElementById('group-select').value);
+        
+        if(!studentID) return alert("Error: Student ID required.");
+        if(!configData) return alert("Error: Secure connection not established yet. Please wait.");
+
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('dashboard-section').classList.remove('hidden');
+
+        // Restore state
+        const savedState = localStorage.getItem('k26_tour_' + studentID);
+        if (savedState) {
+            const parsed = JSON.parse(savedState);
+            acquiredFragments = parsed.frags || [];
+            hintAcquired = parsed.hint || false;
+            updateTerminalState();
+        }
+
+        try {
+            await db.collection("Students").doc(studentID).set({
+                mssv: studentID,
+                group: studentGroup,
+                progress: acquiredFragments.length
+            }, { merge: true });
+        } catch(e) {}
+
+        // Listen for group winner status
+        db.collection("Students").doc(studentID).onSnapshot((doc) => {
+            if (doc.exists && doc.data().isWinner) {
+                alert("🎉 ALGORITHM CHAMPION! 🎉\\nYou are the fastest in Group " + studentGroup + "!");
+            }
+        });
+    };
+
+    window.submitPasscode = async function() {
+        if(!configData) return;
+
+        const codeInput = document.getElementById('passcode-input');
+        const code = codeInput.value.trim().toUpperCase();
+        if(!code) return;
+
+        // UI Loading State (Simulate Decryption & Prevent Brute Force)
+        const btn = document.getElementById('btn-submit-pass');
+        const origText = btn.innerText;
+        btn.innerText = "DECRYPTING...";
+        btn.disabled = true;
+        codeInput.disabled = true;
+        
+        await new Promise(r => setTimeout(r, 1500)); // Artificial delay
+
+        const cleanInput = code.replace(/\\s+/g, '');
+        const hashedInput = await sha256(cleanInput);
+
+        // 1. Check if it's the Secret Room (Early Solve Easter Egg)
+        if (configData.secretHash && hashedInput === configData.secretHash) {
+            try {
+                await db.collection("Students").doc(studentID).set({
+                    individualWinner: true,
+                    secretFoundAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+            } catch(e) {}
+            alert("⚠️ CLASSIFIED ACCESS GRANTED ⚠️\\nEARLY DECRYPTION SUCCESSFUL!\\nProceed immediately to the secret room.");
+            codeInput.value = "";
+            resetBtn(btn, origText, codeInput);
+            return;
+        }
+
+        // 2. Check if it's the "Star of Hope" Hint Passcode
+        if (configData.hintHash && hashedInput === configData.hintHash) {
+            if (hintAcquired) {
+                alert("Hint data stream already acquired.");
+            } else {
+                hintAcquired = true;
+                saveLocalState();
+                updateTerminalState();
+                codeInput.value = "";
+            }
+            resetBtn(btn, origText, codeInput);
+            return;
+        }
+
+        // 3. Check if it's one of the 5 Mandatory Station Passcodes
+        let foundIndex = -1;
+        if (configData.passcodeHashes) {
+            foundIndex = configData.passcodeHashes.indexOf(hashedInput);
+        }
+
+        if (foundIndex !== -1) {
+            if (acquiredFragments.includes(code)) {
+                alert("Data stream already acquired from this station.");
+            } else {
+                acquiredFragments.push(code);
+                saveLocalState();
+                updateTerminalState();
+                codeInput.value = "";
+
+                // Push progress
+                try {
+                    await db.collection("Students").doc(studentID).set({
+                        progress: acquiredFragments.length
+                    }, { merge: true });
+                } catch(e) {}
+            }
+        } else {
+            alert("Error: Invalid Passcode Signature.");
+        }
+
+        resetBtn(btn, origText, codeInput);
+    };
+
+    function resetBtn(btn, text, input) {
+        btn.innerText = text;
+        btn.disabled = false;
+        input.disabled = false;
+        input.focus();
+    }
+
+    function saveLocalState() {
+        localStorage.setItem('k26_tour_' + studentID, JSON.stringify({
+            frags: acquiredFragments,
+            hint: hintAcquired
+        }));
+    }
+
+    function updateTerminalState() {
+        document.getElementById('progress-text').innerText = acquiredFragments.length + "/5";
+        
+        const term = document.getElementById('terminal-screen');
+        term.innerHTML = '<div class="sys-msg">[SYS] Processing station data...</div>';
+        
+        // Render mandatory fragments
+        acquiredFragments.forEach(code => {
+            term.innerHTML += `<div class="bin-output">&gt; Station [${code}] Secured.</div>`;
+        });
+
+        // Map acquired raw codes to their binary visual fragments securely
+        // Note: The client cannot know the full room text. It only receives the binary fragments array from DB.
+        if (configData && configData.binaryFragments) {
+            // We hash the acquired code and find its index in passcodeHashes to know WHICH binary to reveal
+            Promise.all(acquiredFragments.map(async (code) => {
+                const h = await sha256(code.replace(/\\s+/g, '').toUpperCase());
+                return configData.passcodeHashes.indexOf(h);
+            })).then(indexes => {
+                indexes.forEach(idx => {
+                    if(idx !== -1 && idx < 5) {
+                        const bgElement = document.getElementById('bg-code-' + idx);
+                        if(bgElement) bgElement.innerText = configData.binaryFragments[idx] || '';
+                    }
+                });
+            });
+        }
+
+        // Render Hint if acquired
+        if (hintAcquired && configData && configData.hintText) {
+            term.innerHTML += `<div class="hint-output">[STAR OF HOPE] Signal Intercepted: "${configData.hintText}"</div>`;
+        }
+
+        if (acquiredFragments.length >= 5) {
+            document.getElementById('hidden-challenge-area').classList.remove('hidden');
+            term.innerHTML += `<div class="sys-msg" style="color:var(--primary); margin-top:10px;">[!] ALL MANDATORY STATIONS SECURED. PROCEED TO EVALUATION.</div>`;
+        }
+    }
+
+    window.startChallenge = function() {
+        startTime = Date.now();
+        document.getElementById('dashboard-section').classList.add('hidden');
+        document.getElementById('challenge-section').classList.remove('hidden');
+    };
+
+    window.submitChallenge = async function() {
+        const answer = document.getElementById('answer-input').value.trim();
+        if(!answer) return alert("System requires an input!");
+        
+        const btn = document.getElementById('btn-submit-group');
+        btn.innerText = "EVALUATING...";
+        btn.disabled = true;
+
+        const timeTaken = (Date.now() - startTime) / 1000; 
+        const isCorrect = (answer.toUpperCase() === "5V" || answer.toUpperCase() === "5 V"); 
+
+        try {
+            await db.collection("Students").doc(studentID).set({
+                timeTaken: timeTaken,
+                isCorrect: isCorrect,
+                completedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true }); 
+            
+            document.getElementById('challenge-section').innerHTML = `
+                <h2 style="color:var(--success);">Target Acquired!</h2>
+                <p>Execution Time: <span style="color:var(--primary); font-size:1.2em;">${timeTaken.toFixed(2)}s</span></p>
+                <p>Data transmitted. Stand by for final evaluation.</p>`;
+        } catch (e) {
+            alert("Database Error: Could not transmit data.");
+            btn.innerText = "SUBMIT GROUP ANSWER";
+            btn.disabled = false;
+        }
+    };
+
+    window.submitSecret = async function() {
+        if(!configData) return;
+        const guessInput = document.getElementById('secret-key-input');
+        const guess = guessInput.value.trim().toUpperCase();
+        if(!guess) return;
+
+        const btn = document.getElementById('btn-submit-secret');
+        const origText = btn.innerText;
+        btn.innerText = "VERIFYING...";
+        btn.disabled = true;
+        
+        await new Promise(r => setTimeout(r, 2000)); // Suspense delay
+
+        const cleanGuess = guess.replace(/\\s+/g, '');
+        const hashedGuess = await sha256(cleanGuess);
+
+        if (hashedGuess === configData.secretHash) {
+            try {
+                await db.collection("Students").doc(studentID).set({
+                    individualWinner: true,
+                    secretFoundAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+            } catch(e) {}
+            
+            alert("⚠️ CLASSIFIED ACCESS GRANTED ⚠️\\nINDIVIDUAL REWARD UNLOCKED.\\nProceed immediately to claim your prize!");
+            guessInput.style.borderColor = "var(--success)";
+            guessInput.style.color = "var(--success)";
+            btn.innerText = "ACCESS GRANTED";
+        } else {
+            alert("ACCESS DENIED. Incorrect sequence.");
+            resetBtn(btn, origText, guessInput);
+        }
+    };
+
+})(); // End IIFE
+</script>
+</body>
+</html>
