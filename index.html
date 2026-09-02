@@ -215,31 +215,10 @@
     <div class="terminal" id="terminal-screen">
         <div class="sys-msg">[SYS] System initialized. Awaiting station passcodes...</div>
     </div>
-
-    <div id="hidden-challenge-area" class="hidden">
-        <hr>
-        <h3>All Stations Reached</h3>
-        <button class="btn-accent" onclick="startChallenge()">Proceed to Final Challenge</button>
-    </div>
 </div>
 
-<!-- FINAL EVALUATION SECTION -->
-<div class="container hidden" id="challenge-section">
-    <h2>Final Evaluation</h2>
-    <p style="color: var(--accent);">Warning: Timer is running!</p>
-    <p>What is the standard logic voltage of an Arduino UNO?</p>
-    <input type="text" id="answer-input" placeholder="Your answer (e.g. 3.3V)">
-    <button id="btn-submit-group" class="btn-accent" onclick="submitChallenge()">Submit Group Answer</button>
-
-    <hr style="border-color: #222; margin: 40px 0 20px 0;">
-    <div style="text-align: left;">
-        <p style="color: #444; font-size: 0.75em; margin-bottom: 5px;">[?] UNIDENTIFIED BACKGROUND SIGNALS DETECTED. DECODE REQUIRED.</p>
-        <div style="display: flex; gap: 10px;">
-            <input type="text" id="secret-key-input" placeholder="______" maxlength="6" class="mysterious-input" style="flex: 1; padding: 10px; margin: 0; width: auto;">
-            <button id="btn-submit-secret" class="mysterious-btn" onclick="submitSecret()" style="width: auto; padding: 10px 20px; margin: 0;">Execute</button>
-        </div>
-    </div>
-</div>
+<!-- DYNAMIC CHALLENGE AREA (Injected via JS) -->
+<div id="challenge-area"></div>
 
 <!-- BOTTOM WATERMARKS -->
 <div class="watermark-container" id="bottom-watermarks">
@@ -425,9 +404,7 @@
         });
 
         // Map acquired raw codes to their binary visual fragments securely
-        // Note: The client cannot know the full room text. It only receives the binary fragments array from DB.
         if (configData && configData.binaryFragments) {
-            // We hash the acquired code and find its index in passcodeHashes to know WHICH binary to reveal
             Promise.all(acquiredFragments.map(async (code) => {
                 const h = await sha256(code.replace(/\\s+/g, '').toUpperCase());
                 return configData.passcodeHashes.indexOf(h);
@@ -446,17 +423,37 @@
             term.innerHTML += `<div class="hint-output">[STAR OF HOPE] Signal Intercepted: "${configData.hintText}"</div>`;
         }
 
+        // --- DYNAMIC RENDERING FOR SECURITY ---
         if (acquiredFragments.length >= 5) {
-            document.getElementById('hidden-challenge-area').classList.remove('hidden');
-            term.innerHTML += `<div class="sys-msg" style="color:var(--primary); margin-top:10px;">[!] ALL MANDATORY STATIONS SECURED. PROCEED TO EVALUATION.</div>`;
+            term.innerHTML += `<div class="sys-msg" style="color:var(--primary); margin-top:10px;">[!] ALL MANDATORY STATIONS SECURED.</div>`;
+            
+            const challengeArea = document.getElementById('challenge-area');
+            
+            // Only inject if it hasn't been injected yet
+            if (challengeArea.innerHTML.trim() === "") {
+                if (startTime === 0) startTime = Date.now();
+                challengeArea.className = "container";
+                challengeArea.style.marginTop = "20px";
+                
+                challengeArea.innerHTML = `
+                    <h2>Final Evaluation</h2>
+                    <p style="color: var(--accent);">Warning: Timer is running!</p>
+                    <p>What is the standard logic voltage of an Arduino UNO?</p>
+                    <input type="text" id="answer-input" placeholder="Your answer (e.g. 3.3V)">
+                    <button id="btn-submit-group" class="btn-accent" onclick="submitChallenge()">Submit Group Answer</button>
+
+                    <hr style="border-color: #222; margin: 40px 0 20px 0;">
+                    <div style="text-align: left;">
+                        <p style="color: #444; font-size: 0.75em; margin-bottom: 5px;">[?] UNIDENTIFIED BACKGROUND SIGNALS DETECTED. DECODE REQUIRED.</p>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="secret-key-input" placeholder="______" maxlength="5" class="mysterious-input" style="flex: 1; padding: 10px; margin: 0; width: auto;">
+                            <button id="btn-submit-secret" class="mysterious-btn" onclick="submitSecret()" style="width: auto; padding: 10px 20px; margin: 0;">Execute</button>
+                        </div>
+                    </div>
+                `;
+            }
         }
     }
-
-    window.startChallenge = function() {
-        startTime = Date.now();
-        document.getElementById('dashboard-section').classList.add('hidden');
-        document.getElementById('challenge-section').classList.remove('hidden');
-    };
 
     window.submitChallenge = async function() {
         const answer = document.getElementById('answer-input').value.trim();
@@ -476,7 +473,7 @@
                 completedAt: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true }); 
             
-            document.getElementById('challenge-section').innerHTML = `
+            document.getElementById('challenge-area').innerHTML = `
                 <h2 style="color:var(--success);">Target Acquired!</h2>
                 <p>Execution Time: <span style="color:var(--primary); font-size:1.2em;">${timeTaken.toFixed(2)}s</span></p>
                 <p>Data transmitted. Stand by for final evaluation.</p>`;
